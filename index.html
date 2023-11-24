@@ -288,13 +288,9 @@ var myGeoJSON4 = {
 // Créez le calque GeoJSON4, mais sans ajouter de données initiales
 var geojsonLayer4 = L.geoJSON(null, {
     pointToLayer: function (feature, latlng) {
-        // Vous pouvez personnaliser l'apparence des points ici
-        return L.marker(latlng, {
-            // Options pour les marqueurs, si nécessaire
-        });
+        return L.marker(latlng);
     },
     onEachFeature: function (feature, layer) {
-        // Ajout du popup au marqueur
         layer.bindPopup(createPopupContent(feature));
     }
 });
@@ -305,11 +301,10 @@ geojsonLayer4.addTo(map);
 // Fonction pour créer le contenu du popup en fonction des propriétés de la feature
 function createPopupContent(feature) {
     var popupContent = "<strong><center>A livrer:</center></strong><br>";
-    // Ajoutez les propriétés au popup seulement si elles ne sont pas null ou false
-    popupContent += (feature.properties.ToubanVigne !== null && feature.properties.ToubanVigne !== false) ?  "<center><strong>-Touban Vigne: </strong>" + feature.properties.ToubanVigne + "<br>" : "";
-    popupContent += (feature.properties.Toubanoptimum !== null && feature.properties.Toubanoptimum !== false) ?  "<center><strong>- Touban Optimum: </strong>" + feature.properties.Toubanoptimum + "<br>" : "";
-    popupContent += (feature.properties.Compostdemarc !== null && feature.properties.Compostdemarc !== false) ? "<center><strong>- Compost de marc: </strong>" + feature.properties.Compostdemarc + "<br>" : "";
-    popupContent += (feature.properties.Fumier !== null && feature.properties.Fumier !== false) ? "<center><strong>- Fumier</strong>" + feature.properties.Fumier + "<br>" : "";
+    popupContent += (feature.properties.ToubanVigne !== null) ? "<center><strong>- Touban Vigne: </strong>" + feature.properties.ToubanVigne + "<br>" : "";
+    popupContent += (feature.properties.Toubanoptimum !== null) ? "<center><strong>- Touban Optimum: </strong>" + feature.properties.Toubanoptimum + "<br>" : "";
+    popupContent += (feature.properties.Compostdemarc !== null) ? "<center><strong>- Compost de marc: </strong>" + feature.properties.Compostdemarc + "<br>" : "";
+    popupContent += (feature.properties.Fumier !== null) ? "<center><strong>- Fumier: </strong>" + feature.properties.Fumier + "<br>" : "";
 
     return popupContent;
 }
@@ -317,33 +312,8 @@ function createPopupContent(feature) {
 // Ajoutez des cases à cocher pour filtrer les marqueurs
 var filterControls = document.getElementById('filterControls');
 
-// Fonction de filtrage basée sur les cases à cocher
-function filterMarkers() {
-    // Effacer les marqueurs actuels du calque
-    geojsonLayer4.clearLayers();
-
-    // Filtrer les données en fonction des cases à cocher
-    var filteredFeatures = myGeoJSON4.features.filter(function (feature) {
-        var showMarker = false;  
-
-        // Initialisez à false, changez à true si au moins une condition est remplie
-        ['Touban Vigne', 'Touban Optimum', 'Compost de Marc', 'Fumier'].forEach(function (property) {
-            var checkbox = document.getElementById(property);
-            if (checkbox.checked && (feature.properties[property] !== null)) {
-                showMarker = true;
-            }
-        });
-        return showMarker;
-    });
-
-    // Ajouter les nouvelles données filtrées au calque
-    geojsonLayer4.addData({ type: 'FeatureCollection', features: filteredFeatures });
-}
-
-
-
 // Créez une case à cocher pour chaque propriété
-['Touban Vigne', 'Touban Optimum', 'Compost de Marc', 'Fumier'].forEach(function (property) {
+['ToubanVigne', 'Toubanoptimum', 'Compostdemarc', 'Fumier'].forEach(function (property) {
     var checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.id = property;
@@ -361,36 +331,26 @@ function filterMarkers() {
     filterControls.appendChild(document.createElement('br'));
 });
 
+// Fonction de filtrage basée sur les cases à cocher
+function filterMarkers() {
+    geojsonLayer4.clearLayers();
 
-var geojsonLayer5;
-// Ajoutez votre GeoJSON5 à la carte
-		var geojsonLayer5 = L.geoJSON(myGeoJSON1, {
-		style: function (feature) {
-			var manquantpourcent = feature.properties.manquantpourcent;
-			var color; 
+    var filteredFeatures = myGeoJSON4.features.filter(function (feature) {
+        var showMarker = false;
 
+        ['ToubanVigne', 'Toubanoptimum', 'Compostdemarc', 'Fumier'].forEach(function (property) {
+            var checkbox = document.getElementById(property);
 
-// Nuance de couleur en fonction des manquants
+            if (checkbox && checkbox.checked && feature.properties[property] !== null && feature.properties[property] !== false) {
+                showMarker = true;
+            }
+        });
 
-if (manquantpourcent >= 20) {
-  color = 'rgb(240, 0, 32)'; // Rouge
-} else if (manquantpourcent <= 20) {
-  color = 'rgb(0, 179, 0)'; // Vert foncé
-} 
-return {
-  fillColor: color,
-  fillOpacity: 1,
-  color: color,
-  weight: 1
-};
-
-  },
-  onEachFeature: function (feature, layer) {
-    var manquantpourcent = feature.properties.manquantpourcent;
-    var popupContent = "<strong><center> " + feature.properties.nom + "</center></strong><br>Manquant: " + manquantpourcent + "%";
-    layer.bindPopup(popupContent);
-}
+        return showMarker;
     });
+
+    geojsonLayer4.addData({ type: 'FeatureCollection', features: filteredFeatures });
+}
 
 // Ajouter le contrôle de localisation
 L.control.locate({
@@ -400,74 +360,6 @@ L.control.locate({
     setView: 'watch',
     icon: 'fas fa-location-arrow'
 }).addTo(map);
-
-// Ajoutez des boutons pour activer/désactiver les couches
-var layer1Checkbox = document.getElementById('layer1Checkbox');
-var layer2Checkbox = document.getElementById('layer2Checkbox');
-var layer3Checkbox = document.getElementById('layer3Checkbox');
-var layer4Checkbox = document.getElementById('layer4Checkbox');
-var layer5Checkbox = document.getElementById('layer5Checkbox');
-
-// Définir l'état initial des couches
-layer1Checkbox.checked = true;  // La couche 1 est cochée par défaut
-layer2Checkbox.checked = true;   // La couche 2 est cochée par défaut
-layer3Checkbox.checked = false;  // La couche 3 est décochée par défaut
-layer4Checkbox.checked = false;  // La couche 4 est décochée par défaut
-layer5Checkbox.checked = false;  // La couche 5 est décochée par défaut
-
-// Ajouter les couches à la carte avec l'état initial
-geojsonLayer1.addTo(map);
-geojsonLayer2.addTo(map);
-
-
-
-
-layer1Checkbox.addEventListener('change', function () {
-    if (layer1Checkbox.checked) {
-        geojsonLayer1.addTo(map);
-        geojsonLayer3.removeFrom(map);
-        layer3Checkbox.checked = false;		// Décocher la couche 3
-		layer5Checkbox.checked = false;
-    } else {
-        geojsonLayer1.removeFrom(map);
-    }
-});
-
-layer2Checkbox.addEventListener('change', function () {
-    geojsonLayer2[layer2Checkbox.checked ? 'addTo' : 'removeFrom'](map);
-});
-layer5Checkbox.addEventListener('change', function () {
-    geojsonLayer5[layer5Checkbox.checked ? 'addTo' : 'removeFrom'](map);
-});
-
-layer3Checkbox.addEventListener('change', function () {
-    if (layer3Checkbox.checked) {
-        geojsonLayer3.addTo(map);
-        geojsonLayer1.removeFrom(map);
-        layer1Checkbox.checked = false;  // Décocher la couche 1
-    } else {
-        geojsonLayer3.removeFrom(map);
-    }
-});
-// Gérer les changements d'état des couches
-
-
-
-layer4Checkbox.addEventListener('change', function () {
-    geojsonLayer4[layer4Checkbox.checked ? 'addTo' : 'removeFrom'](map);
-    toggleFilterControls();
-});
-
-
-// Fonction pour afficher ou masquer le conteneur des filtres
-function toggleFilterControls() {
-    filterControlsContainer.style.display = layer4Checkbox.checked ? 'block' : 'none';
-}
-
-
-// Initialiser l'état du conteneur des filtres lors du chargement de la page
-toggleFilterControls();
-
 
 
   </script>
