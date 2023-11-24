@@ -1,3 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carte du Vignoble</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.label/dist/leaflet.label.css" />
+  <style>
+    #map {
+      height: 100vh;
+    }
+
+    #legend {
+      padding: 10px;
+      background-color: white;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      position: absolute;
+      bottom: 20px;
+      right: 10px;
+      z-index: 1000;
+    }
+	
+	#filterControlsContainer {
+  position: absolute;
+  bottom: 70px;
+  right: 10px;
+  z-index: 1000;
+  background-color: white;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  
+}
+
+#filterControls {
+  max-height: 300px;
+  overflow-y: auto;
+}
+ body {
+      margin: 0; /* Supprime les marges par défaut du corps */
+      overflow: hidden; /* Empêche le défilement du corps */
+    }
+  </style>
+</head>
+<!-- Balise select pour la légende -->
+<select id="legendDropdown" style="display: none;">
+  <option value="legendUrl">Légende</option>
+</select>
+
+<body>
+  <script src="https://unpkg.com/leaflet.label/dist/leaflet.label.js"></script>
+  
+<!-- Ajoutez cette balise div dans le corps de votre page pour contenir les filtres -->
+<div id="filterControlsContainer">
+  <div id="filterControls"></div>
+</div>
+
+
+<div id="map"></div>
+<div id="legend">
+  <label>
+    <input type="checkbox" id="layer4Checkbox" checked>
+    Amendements
+  </label>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.js"></script>
+
+
+<script>
+// Créez différentes couches de fond de carte
+var streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' });
+var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Imagery © Esri & NASA' });
+var topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap contributors' });
+// Ajoutez la couche WMS
+var wmsLayer = L.tileLayer.wms('https://agroenvgeo.data.inra.fr/geoserver/gissol_igcs/wms', {
+  layers: 'etude_30110',
+  format: 'image/png',
+  transparent: true,
+  attribution: 'Attribution de la couche WMS'
+});
+
+
+// Ajoutez les couches de fond de carte à la carte
+var baseMaps = {
+  "Street Map": streetLayer,
+  "Satellite Map": satelliteLayer,
+  "Topographic Map": topoLayer
+};
+
+// Créez une carte Leaflet avec une couche de fond par défaut
+var map = L.map('map', {
+  center: [44.90321, -0.03908],
+  zoom: 14 ,
+  layers: [streetLayer], // Couche de fond par défaut
+  // Utilisez le callback "layers" pour garantir que la carte est chargée avant d'effectuer d'autres opérations
+  // Cela est nécessaire car il n'y a pas d'événement "load" standard dans Leaflet
+  // Voir la documentation ici : https://leafletjs.com/reference-1.7.1.html#map-event
+  layers: [streetLayer],
+  whenReady: function () {
+    var currentZoom = map.getZoom();
+    var fontSize = updateLabelFontSize(currentZoom);
+    document.querySelector('.labelClass').style.fontSize = fontSize;
+  }
+});
+
+
+// Ajoutez la couche WMS à la carte
+
+wmsLayer.setOpacity(0.7);
+
+// Ajoutez le contrôle des couches à la carte
+L.control.layers(baseMaps, { "Carte de Sol": wmsLayer }).addTo(map);
+
+  // Créez la première couche GeoJSON
+  var geojsonLayer1;
+
+
+  // Inclure le contenu GeoJSON directement dans le script
+  var myGeoJSON1 = {
+"type": "FeatureCollection",
+"name": "20231123extra",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "nom": "Plateau C", "surfviti": 1.0846, "plantation": "1980", "portegreff": "Gravesac", "cepage": "MERLOT N", "manquantpourcent": "13.5" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.028073522823334, 44.907197583511469 ], [ -0.02634349800873, 44.907326761446285 ], [ -0.02631667591858, 44.906580184960816 ], [ -0.027624252813339, 44.906366614065753 ], [ -0.027621570604324, 44.906368513770829 ], [ -0.028073522823334, 44.907197583511469 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Plateau B", "surfviti": 0.7213, "plantation": "1980", "portegreff": "Gravesac", "cepage": "MERLOT N", "manquantpourcent": "9.53" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.027624252813339, 44.906366614065753 ], [ -0.02631667591858, 44.906580184960816 ], [ -0.026296559350969, 44.905791000536027 ], [ -0.026430669801711, 44.905768203841944 ], [ -0.027063671129226, 44.905772003291602 ], [ -0.027227285879136, 44.905798599432046 ], [ -0.027347985284806, 44.905857490842159 ], [ -0.027624252813339, 44.906366614065753 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Plateau D", "surfviti": 0.3859, "plantation": "1980", "portegreff": "Gravesac", "cepage": "MERLOT N", "manquantpourcent": "23.4" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.026275101678848, 44.907324057466589 ], [ -0.025178078191757, 44.907386746656776 ], [ -0.025030556695939, 44.907086597792791 ], [ -0.026267055051802, 44.906887130908707 ], [ -0.026275101678848, 44.907324057466589 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Cabernet Franc Plateau", "surfviti": 0.8471, "plantation": "2010", "portegreff": null, "cepage": "CABERNET FRANC N", "manquantpourcent": "3.92" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.026267055051802, 44.906887130908707 ], [ -0.025030556695939, 44.907086597792791 ], [ -0.024574581163406, 44.906516690573348 ], [ -0.026272419469834, 44.906216537166273 ], [ -0.026267055051802, 44.906887130908707 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Plateau E", "surfviti": 0.7087, "plantation": "1975", "portegreff": "Gravesac", "cepage": "MERLOT N", "manquantpourcent": "2.79" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.026272419469834, 44.906216537166273 ], [ -0.024574581163406, 44.906516690573348 ], [ -0.024233940618515, 44.906136749288002 ], [ -0.026296559350969, 44.905791000536027 ], [ -0.026272419469834, 44.906216537166273 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Plateau A", "surfviti": 0.9734, "plantation": "1970", "portegreff": "Gravesac", "cepage": "MERLOT N", "manquantpourcent": "3.72" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.026296559350969, 44.905791000536027 ], [ -0.024233940618515, 44.906136749288002 ], [ -0.023810151594163, 44.905650420778393 ], [ -0.023767236249924, 44.905589629425407 ], [ -0.025215629117965, 44.905346463370506 ], [ -0.025408748167039, 44.905437650761634 ], [ -0.026186588781357, 44.905711212067111 ], [ -0.026296559350969, 44.905791000536027 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Bruno", "surfviti": 0.5346, "plantation": "1965", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "16.6" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.061633549402638, 44.900422012112088 ], [ -0.061086378763599, 44.900080028815196 ], [ -0.061701945732517, 44.899238361259926 ], [ -0.061964802215976, 44.899358057397365 ], [ -0.06199967093317, 44.899937535174487 ], [ -0.061633549402638, 44.900422012112088 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "12 rangs Bruno", "surfviti": 0.1775, "plantation": "1989", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "24.1" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.060159675548955, 44.8990740161573 ], [ -0.059934369991703, 44.899005618057082 ], [ -0.060197226475162, 44.898352032107226 ], [ -0.060492269466801, 44.898428030855207 ], [ -0.06040375656931, 44.89867122617369 ], [ -0.060159675548955, 44.8990740161573 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Long Court", "surfviti": 0.3368, "plantation": "1952", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "30.9" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.058266035984439, 44.898207634209328 ], [ -0.057445280025883, 44.897941637132398 ], [ -0.057340673874302, 44.898078435782807 ], [ -0.056367032001896, 44.897772538350893 ], [ -0.056498460243626, 44.8975198392449 ], [ -0.058333091209812, 44.898112635394583 ], [ -0.058266035984439, 44.898207634209328 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Caveaux", "surfviti": 0.0417, "plantation": "1977", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "17.1" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.056456886003896, 44.897350739222937 ], [ -0.055882893274708, 44.897285189080691 ], [ -0.055940560768529, 44.897211088829906 ], [ -0.056503824661656, 44.897269039034171 ], [ -0.056456886003896, 44.897350739222937 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Long Moyen Court", "surfviti": 0.6307, "plantation": "1970", "portegreff": "", "cepage": "MERLOT N", "manquantpourcent": "34.6" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.056372396419925, 44.897109438330517 ], [ -0.055365226934834, 44.897067693940954 ], [ -0.055821202467365, 44.895794671546355 ], [ -0.056067965696735, 44.895840272835237 ], [ -0.055929831932468, 44.896459630892224 ], [ -0.056247673700734, 44.896502381607256 ], [ -0.056184641788883, 44.896752235150487 ], [ -0.056434087227268, 44.896780735485656 ], [ -0.056372396419925, 44.897109438330517 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Cabernet Franc Maze", "surfviti": 1.6581, "plantation": "2018", "portegreff": "101-14C", "cepage": "CABERNET FRANC N", "manquantpourcent": "8.95" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.0269387, 44.910151942820633 ], [ -0.0261451, 44.909298342820641 ], [ -0.028356565916443, 44.908867795111206 ], [ -0.028777, 44.909731042820688 ], [ -0.0278548, 44.909827742820639 ], [ -0.0269387, 44.910151942820633 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Merlot Maze Route", "surfviti": 2.0346, "plantation": "2018", "portegreff": "Gravesac", "cepage": "MERLOT N", "manquantpourcent": "5.48" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.028469218695069, 44.908723423623847 ], [ -0.027042283499147, 44.908955177677342 ], [ -0.026827706777955, 44.907363274442488 ], [ -0.0281773, 44.907221842820604 ], [ -0.0283746, 44.907562942820597 ], [ -0.028565778219605, 44.907997761445571 ], [ -0.028388752424622, 44.908039553756836 ], [ -0.028388752424622, 44.908043353056335 ], [ -0.028469218695069, 44.908723423623847 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Merlot Maze Chateau", "surfviti": 1.2883, "plantation": "2018", "portegreff": "Garvesac", "cepage": "MERLOT N", "manquantpourcent": "3.84" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.026983274900818, 44.908943779958861 ], [ -0.026779427015686, 44.90895897691636 ], [ -0.026559485876465, 44.908943779958861 ], [ -0.026012315237427, 44.908852598129592 ], [ -0.025809, 44.907383142820606 ], [ -0.026763333761598, 44.90738607050401 ], [ -0.026983274900818, 44.908943779958861 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Talus", "surfviti": 0.2241, "plantation": "2001", "portegreff": "3309C", "cepage": "MERLOT N", "manquantpourcent": "6.43" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.024402989828491, 44.907424063919784 ], [ -0.024134768927002, 44.907469655985558 ], [ -0.023635878050232, 44.906538810807909 ], [ -0.023882641279603, 44.906512215009926 ], [ -0.024402989828491, 44.907424063919784 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Raccordée", "surfviti": 0.7432, "plantation": "1997", "portegreff": "3309C", "cepage": "MERLOT N", "manquantpourcent": "7.04" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.024000658476257, 44.907469655985558 ], [ -0.023582233869935, 44.907507649346101 ], [ -0.022471799337769, 44.905623148395875 ], [ -0.022793664419556, 44.905569955940301 ], [ -0.023330106222534, 44.906257654606542 ], [ -0.024000658476257, 44.907469655985558 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Merlot 2010", "surfviti": 0.4282, "plantation": "2010", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "6.75" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.023474945509339, 44.907511448680701 ], [ -0.022959961378479, 44.907553241345525 ], [ -0.022917046034241, 44.907598833308867 ], [ -0.022498621427918, 44.906781971818972 ], [ -0.023035063230896, 44.906664190832643 ], [ -0.023474945509339, 44.907511448680701 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "12 Rangs", "surfviti": 0.2833, "plantation": "1982", "portegreff": "3309C", "cepage": "MERLOT N", "manquantpourcent": "16.0" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.022917046034241, 44.907598833308867 ], [ -0.022976054632568, 44.907792598749595 ], [ -0.022917046034241, 44.907830591896669 ], [ -0.022788300001526, 44.907845789148475 ], [ -0.022144569837951, 44.906842761911037 ], [ -0.022498621427918, 44.906781971818972 ], [ -0.022917046034241, 44.907598833308867 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Montagne", "surfviti": 0.6342, "plantation": "1985", "portegreff": "3309C", "cepage": "MERLOT N", "manquantpourcent": "30.1" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.022123112165833, 44.908290306986025 ], [ -0.020578159773255, 44.908617044401055 ], [ -0.020368947470093, 44.908750018398706 ], [ -0.019848598921205, 44.908867795111128 ], [ -0.020079268896484, 44.908347296203765 ], [ -0.021329178297425, 44.908130736875776 ], [ -0.022026552641297, 44.908107941109549 ], [ -0.022123112165833, 44.908290306986025 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Semillon Montagne", "surfviti": 0.233, "plantation": "2016", "portegreff": null, "cepage": "SEMILLON", "manquantpourcent": "33.9" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.019862009966279, 44.908712025859337 ], [ -0.019285335028076, 44.908106041461991 ], [ -0.019604517900849, 44.908031955156929 ], [ -0.019931747400666, 44.908007259700732 ], [ -0.020014895880127, 44.908109840757099 ], [ -0.020012213671113, 44.908125037935079 ], [ -0.019862009966279, 44.908712025859337 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Cabernet Franc Montagne", "surfviti": 0.8258, "plantation": "2014", "portegreff": null, "cepage": "CABERNET FRANC N", "manquantpourcent": "5.71" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.019862009966279, 44.908712025859337 ], [ -0.019848598921205, 44.908867795111128 ], [ -0.019526733839417, 44.909008367000311 ], [ -0.019357754671479, 44.909055857425749 ], [ -0.019184752190018, 44.909068204929916 ], [ -0.018858863794708, 44.9087405202662 ], [ -0.01846457906952, 44.908829802649571 ], [ -0.018156125032807, 44.908402385727243 ], [ -0.019285335028076, 44.908106041461991 ], [ -0.019862009966279, 44.908712025859337 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Sauvignon Gris Montagne", "surfviti": 0.242, "plantation": "2015", "portegreff": "Fercal", "cepage": "SAUVIGNON GRIS", "manquantpourcent": "9.13" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.01846457906952, 44.908829802649571 ], [ -0.017866446459199, 44.90897227425075 ], [ -0.017866446459198, 44.908970374631707 ], [ -0.017590178930665, 44.908550557286887 ], [ -0.018156125032807, 44.908432779924453 ], [ -0.01846457906952, 44.908829802649571 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Sauvignon Blanc", "surfviti": 0.3233, "plantation": "2015", "portegreff": "420A", "cepage": "SAUVIGNON BLANC", "manquantpourcent": "6.78" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.019127084696199, 44.909067255122018 ], [ -0.018046154463196, 44.909333200726522 ], [ -0.017895950758362, 44.909004567764576 ], [ -0.01884277054062, 44.908774713535799 ], [ -0.019127084696199, 44.909067255122018 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "La Nauze", "surfviti": 0.8903, "plantation": "1954", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "17.9" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.030936415247823, 44.906889753383439 ], [ -0.028425867609882, 44.907395068122334 ], [ -0.028200562052632, 44.90701513264279 ], [ -0.031097347788715, 44.90652881156452 ], [ -0.031049068026448, 44.906612398292665 ], [ -0.030936415247823, 44.906889753383439 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Gelive", "surfviti": 0.4195, "plantation": "2001", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "4.75" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.05509968824236, 44.898353987943899 ], [ -0.054442547033711, 44.897989192567771 ], [ -0.054724178980275, 44.897692794620554 ], [ -0.054885111521166, 44.897780194174103 ], [ -0.055118463705464, 44.89751989511246 ], [ -0.055550299356861, 44.897687094645093 ], [ -0.05535181588976, 44.897987292585796 ], [ -0.055410824488087, 44.898019592270856 ], [ -0.05509968824236, 44.898353987943899 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "150 bas Bourzeau", "surfviti": 0.4156, "plantation": "1963", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "17.8" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.054442547033711, 44.897989192567771 ], [ -0.054099224279804, 44.897833393837331 ], [ -0.054745636652393, 44.897126594295017 ], [ -0.055362544725819, 44.897217794724135 ], [ -0.054909251402302, 44.89772509447107 ], [ -0.054745636652393, 44.897664294737474 ], [ -0.054745636652393, 44.897662394744749 ], [ -0.054442547033711, 44.897989192567771 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "150 Bas Bourzeaud 2", "surfviti": 0.8484, "plantation": "1965", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "18.0" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.053973160456105, 44.8978105939877 ], [ -0.053155086706562, 44.897147494406141 ], [ -0.05346622295229, 44.896632589456857 ], [ -0.053578875730915, 44.89651668770707 ], [ -0.053906105230732, 44.896708590477395 ], [ -0.054101906488819, 44.896828291881143 ], [ -0.054300389955921, 44.896928992869071 ], [ -0.054592750738545, 44.897027793666922 ], [ -0.054651759336872, 44.897054393852706 ], [ -0.053973160456105, 44.8978105939877 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "8 Rgs Petite Carrière", "surfviti": 0.118, "plantation": "1968", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "23.5" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.054249427984639, 44.896776991310041 ], [ -0.053922198484822, 44.896659189825471 ], [ -0.053766630361958, 44.896562288423382 ], [ -0.053511820505543, 44.896450186597612 ], [ -0.05358155793993, 44.896332384443532 ], [ -0.054313801000996, 44.896600288992694 ], [ -0.054249427984639, 44.896776991310041 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Derrière Bourzeau", "surfviti": 1.0831, "plantation": "1958", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "22.2" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.054179690550251, 44.899858744406778 ], [ -0.052940509985372, 44.900700402880624 ], [ -0.052742026518269, 44.900609207975243 ], [ -0.052905641268177, 44.900481914844612 ], [ -0.052685700128956, 44.900350821624464 ], [ -0.052476487825795, 44.900502813736146 ], [ -0.05196955032198, 44.900280525136921 ], [ -0.052801035116597, 44.899657352516329 ], [ -0.05308266706316, 44.899851144725609 ], [ -0.053600333403035, 44.899463559653888 ], [ -0.054179690550251, 44.899858744406778 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Cabane", "surfviti": 0.1722, "plantation": "1986", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "20" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.054093859861775, 44.901613293909897 ], [ -0.053879283140583, 44.901522100452461 ], [ -0.054439864824695, 44.90080299697626 ], [ -0.054638348291797, 44.900879942427871 ], [ -0.054093859861775, 44.901613293909897 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "4 Rgs du Bois", "surfviti": 0.0534, "plantation": "1955", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "13.8" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.054657123754901, 44.902519521031735 ], [ -0.053686164091511, 44.902167101070631 ], [ -0.053698234032078, 44.902103456265159 ], [ -0.054683945845052, 44.902472975122976 ], [ -0.054657123754901, 44.902519521031735 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Virage du bois", "surfviti": 0.6665, "plantation": "1982", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "19.9" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.05721595115511, 44.903125564322664 ], [ -0.056266449163839, 44.902664858014532 ], [ -0.056262425850316, 44.902632560939011 ], [ -0.056479684780522, 44.902524270612098 ], [ -0.056812278698368, 44.902353285470127 ], [ -0.0571421904072, 44.902108205879884 ], [ -0.057789943884296, 44.902415030163404 ], [ -0.057352743814869, 44.902709503941999 ], [ -0.057578150636411, 44.902805797808035 ], [ -0.05721595115511, 44.903125564322664 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Maison Isolée du bois", "surfviti": 0.3693, "plantation": "1955", "portegreff": "", "cepage": "MERLOT N", "manquantpourcent": "15.1" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.057276793910532, 44.900751497667422 ], [ -0.055922278358013, 44.900210026277641 ], [ -0.056032248927622, 44.900077032524671 ], [ -0.056657203628092, 44.900343019723024 ], [ -0.05670011897233, 44.900293622193502 ], [ -0.056426533652812, 44.90016822827414 ], [ -0.056536504222422, 44.900037134338788 ], [ -0.057408222152262, 44.900417115937707 ], [ -0.057276793910532, 44.900751497667422 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "150 Des Daims", "surfviti": 0.9236, "plantation": "1965", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "20.9" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.059999268118582, 44.894508186116411 ], [ -0.059100728098594, 44.894521486793636 ], [ -0.059092681471548, 44.894565188997063 ], [ -0.0584355402629, 44.894563288901956 ], [ -0.058489184443197, 44.89381464654263 ], [ -0.060020725790702, 44.89389635163937 ], [ -0.059999268118582, 44.894508186116411 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Daim Côte à côte", "surfviti": 1.1917, "plantation": "1980", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "21.0" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.061882178847037, 44.895735635655292 ], [ -0.06080393082305, 44.895315721656139 ], [ -0.061074833933554, 44.894905305010731 ], [ -0.06118212229415, 44.894475884458984 ], [ -0.060036819044791, 44.894190869048082 ], [ -0.060044865671836, 44.894128165468089 ], [ -0.062391798559866, 44.8946924952266 ], [ -0.062445442740164, 44.894758998368772 ], [ -0.062233548227987, 44.895154215455406 ], [ -0.061882178847037, 44.895735635655292 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Face a face Gauche", "surfviti": 0.5134, "plantation": "1967", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "40.8" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.060069005552969, 44.893681637997304 ], [ -0.05853478199645, 44.893544828886846 ], [ -0.058652799193106, 44.893170502296186 ], [ -0.060136060778342, 44.893295911476145 ], [ -0.060069005552969, 44.893681637997304 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Face a Face hangar", "surfviti": 0.4243, "plantation": "2006", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "18.4" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.060157518450461, 44.893512526688298 ], [ -0.060195069376669, 44.893278810240453 ], [ -0.061978738371573, 44.893531527983747 ], [ -0.061898272101126, 44.893827947380217 ], [ -0.060157518450461, 44.893512526688298 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Piscine", "surfviti": 0.1972, "plantation": "2011", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "8.01" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.061042647425376, 44.892732518090611 ], [ -0.06117139345809, 44.891962949910464 ], [ -0.061461072031699, 44.892037056923996 ], [ -0.061336349312507, 44.892763870649986 ], [ -0.061042647425376, 44.892732518090611 ] ] ] ] } },
+{ "type": "Feature", "properties": { "nom": "Derrière Voisin", "surfviti": 0.5332, "plantation": "1969", "portegreff": null, "cepage": "MERLOT N", "manquantpourcent": "12.1" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -0.051972757641516, 44.899199334164315 ], [ -0.051822553936682, 44.8992620322147 ], [ -0.051650892559729, 44.899414027204628 ], [ -0.051565061871252, 44.899507123937525 ], [ -0.051578472916326, 44.899282931549649 ], [ -0.052219520870887, 44.898247455364761 ], [ -0.052283893887244, 44.898255055257899 ], [ -0.052573572460852, 44.897774360039328 ], [ -0.052989314858161, 44.897878859341738 ], [ -0.052734505001745, 44.898293054708532 ], [ -0.052619170014105, 44.898281654875987 ], [ -0.052560161415778, 44.898344353927044 ], [ -0.052557479206763, 44.898344353927044 ], [ -0.051972757641516, 44.899199334164315 ] ] ] ] } }
+]
+}
+
+
+// Ajoutez votre GeoJSON1 à la carte
+var geojsonLayer1 = L.geoJSON(myGeoJSON1, {
+  style: function (feature) {
+    var cepage = feature.properties.cepage;
+    var color;
+
+    // Déterminez la couleur en fonction du cépage
+    switch (cepage) {
+      case "MERLOT N":
+        color = 'red';
+        break;
+      case "CABERNET FRANC N":
+        color = 'purple';
+        break;
+      case "SAUVIGNON BLANC":
+      case "SAUVIGNON GRIS":
+      case "SEMILLON":
+        color = 'yellow';
+        break;
+      default:
+        color = 'gray'; // Couleur par défaut si le cépage n'est pas reconnu
+    }
+
+    return {
+      fillColor: color,
+      fillOpacity: 0.4,
+      color: color,
+      weight: 0.5
+    };
+  },
+  onEachFeature: function (feature, layer) {
+    var datePlantation = feature.properties.plantation;
+
+    // Récupérez le nom de la parcelle à partir de la propriété "nom"
+    var nomParcelle = feature.properties.nom;
+
+    // Vérifiez si le nom de la parcelle est défini
+    if (nomParcelle) {
+      var datePlantationObj = new Date(datePlantation);
+      var now = new Date();
+
+      // Calcul de l'âge en années
+      var age = now.getFullYear() - datePlantationObj.getFullYear();
+
+      // Ajoutez l'âge et le nom de la parcelle à la popup
+      layer.bindPopup("<strong><center>" + nomParcelle + "</center></strong><br><strong>Surface Viticole: </strong>" + feature.properties.surfviti + " hectares" + "<strong><br>Âge: </strong>" + age + " ans" + "<strong><br>Cépage: </strong>" + feature.properties.cepage + "<strong><br>Porte Greffe: </strong>" + feature.properties.portegreff);
+    } else {
+      // Si le nom de la parcelle n'est pas défini, utilisez un message générique
+      layer.bindPopup("Nom non défini" + "<br>Surface Viticole: " + feature.properties.surfviti + "<br>Date de Plantation: " + datePlantation);
+    };
+  }
+}).addTo(map);
+
+
+
+
+
+
+
+	 // Créez la deuxième couche GeoJSON
+  var geojsonLayer2;
+
+var myGeoJSON2 = {
+"type": "FeatureCollection",
+"name": "parcelle_arrache",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "fid": 1, "Nom": "Gauvrit", "Surface": "0.25", "datearrachage": "2011-11-22", "Type de sol": null }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -0.028566576469493, 44.909233353553738 ], [ -0.028410388176576, 44.908835659085405 ], [ -0.028997953659455, 44.908717140334169 ], [ -0.029098360419188, 44.908848827820442 ], [ -0.029276861325378, 44.908975247523458 ], [ -0.029351236702958, 44.909038457270661 ], [ -0.029351236702958, 44.909038457270661 ], [ -0.02934751793408, 44.90904109100866 ], [ -0.02934751793408, 44.90904109100866 ], [ -0.028570295238371, 44.909230719824578 ], [ -0.028570295238371, 44.909230719824578 ], [ -0.028566576469493, 44.909233353553738 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 2, "Nom": "Triangle verger", "Surface": "0.45", "datearrachage": "2011-11-22", "Type de sol": null }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -0.030556117819747, 44.910209141898243 ], [ -0.029488831151481, 44.910425103611381 ], [ -0.029771457586283, 44.909832523798492 ], [ -0.029842114194983, 44.909611292435464 ], [ -0.030080115403239, 44.909540182173657 ], [ -0.030407367064588, 44.909893098904178 ], [ -0.030407367064588, 44.909893098904178 ], [ -0.030556117819747, 44.910209141898243 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 3, "Nom": "Bas Maze", "Surface": "3.14", "datearrachage": "2011-11-22", "Type de sol": null }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -0.020693942752693, 44.909534914743304 ], [ -0.020270003100491, 44.908839609706199 ], [ -0.02062700491287, 44.908649979599936 ], [ -0.024078022432565, 44.907844044668799 ], [ -0.024011084592743, 44.908139028699793 ], [ -0.023602020016057, 44.908544629270594 ], [ -0.023036767146452, 44.908760597237951 ], [ -0.023021892070936, 44.909097716345535 ], [ -0.022739265636133, 44.909671867774271 ], [ -0.022739265636133, 44.909671867774271 ], [ -0.020693942752693, 44.909534914743304 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 4, "Nom": "Hangar Citrougne", "Surface": "0.8", "datearrachage": "2015-11-22", "Type de sol": null }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -0.022992141919902, 44.90662721953921 ], [ -0.022144262615497, 44.906819490158504 ], [ -0.021683135274502, 44.906129420016441 ], [ -0.021936011558274, 44.906045136072649 ], [ -0.021790979571994, 44.905797551273018 ], [ -0.021958324171546, 44.905726436292973 ], [ -0.022028980780248, 44.905647419545332 ], [ -0.022352513672719, 44.905597375549007 ], [ -0.022352513672719, 44.905597375549007 ], [ -0.022992141919902, 44.90662721953921 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 5, "Nom": "Bois scié", "Surface": "0.52", "datearrachage": "2020-11-22", "Type de sol": null }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -0.055799120970256, 44.900313537977731 ], [ -0.055587151144155, 44.900229245506971 ], [ -0.055635495139582, 44.900158123638704 ], [ -0.054821084755086, 44.899786708008165 ], [ -0.054850834906117, 44.899734024745683 ], [ -0.054802490910692, 44.899710317261857 ], [ -0.054977273048003, 44.899552267119653 ], [ -0.055401212700207, 44.899741927238146 ], [ -0.055456994233391, 44.899676073101269 ], [ -0.056092903711696, 44.899971099046603 ], [ -0.056323467382194, 44.899712951427212 ], [ -0.056665594119061, 44.899878903601277 ], [ -0.056423874141927, 44.900163391928267 ], [ -0.056684187963453, 44.900295099010329 ], [ -0.056650719043544, 44.900331976939249 ], [ -0.056007372027479, 44.900065928493255 ], [ -0.055799120970256, 44.900313537977731 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 6, "Nom": "Petit carré Bourzeaud", "Surface": "0.05", "datearrachage": "2020-11-22", "Type de sol": null }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -0.052706964647385, 44.900626999519012 ], [ -0.052450369594734, 44.90051636622902 ], [ -0.052688370802993, 44.900360952438227 ], [ -0.052892903091334, 44.900479488418341 ], [ -0.052892903091334, 44.900479488418341 ], [ -0.052706964647385, 44.900626999519012 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 7, "Nom": "Maison Bourzeaud", "Surface": "0.85", "datearrachage": "2020-11-22", "Type de sol": null }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -0.053086279073043, 44.899849927859378 ], [ -0.052799933869359, 44.899665536432309 ], [ -0.051940898258317, 44.900297733148875 ], [ -0.051859085342979, 44.900255586917361 ], [ -0.052747871105056, 44.899552267119631 ], [ -0.05258424527438, 44.899478510237941 ], [ -0.052837121558151, 44.89925460483893 ], [ -0.05331684274354, 44.899465339356276 ], [ -0.053402374427756, 44.899386314002776 ], [ -0.053335436587934, 44.899330996190692 ], [ -0.05378540762229, 44.898867378149824 ], [ -0.054503130015933, 44.89922826296997 ], [ -0.054138690665793, 44.899478510237941 ], [ -0.054309754034226, 44.899602316378378 ], [ -0.054391566949564, 44.899544364601134 ], [ -0.054532880166965, 44.899604950548635 ], [ -0.054175878354583, 44.899847293700297 ], [ -0.053592031640581, 44.899467973532843 ], [ -0.053086279073043, 44.899849927859378 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 8, "Nom": "Devant Bourzeaud", "Surface": "0.91", "datearrachage": "2020-11-22", "Type de sol": null }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -0.054410160793959, 44.898527564825272 ], [ -0.054008533755028, 44.898648738799288 ], [ -0.053681282093679, 44.898833133487173 ], [ -0.053480468574212, 44.898920062206358 ], [ -0.052892903091334, 44.899064943112933 ], [ -0.052357400372762, 44.899162408244706 ], [ -0.053112310455196, 44.898411659045955 ], [ -0.053030497539858, 44.898401122145351 ], [ -0.05335774920121, 44.897971741802756 ], [ -0.053566000258429, 44.897982278782088 ], [ -0.053859782999868, 44.898148235951297 ], [ -0.054086627901488, 44.898232531472914 ], [ -0.05436925433629, 44.898485417296207 ], [ -0.054410160793959, 44.898527564825272 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 9, "Nom": "Guimbertau Loterie", "Surface": "1.78", "datearrachage": "2020-11-22", "Type de sol": null }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -0.061063038318452, 44.901290794788558 ], [ -0.060999819247509, 44.901259185663797 ], [ -0.061085350931725, 44.90095626400349 ], [ -0.061040725705179, 44.900814021977531 ], [ -0.060921725101051, 44.900658608991314 ], [ -0.060717192812707, 44.900434708187881 ], [ -0.060624223590733, 44.900397830324884 ], [ -0.060951475252083, 44.900065928493241 ], [ -0.060784130652528, 44.899968464893085 ], [ -0.060613067284096, 44.900105440716558 ], [ -0.060449441453421, 44.900013245486647 ], [ -0.060642817435128, 44.899755098056509 ], [ -0.06020400270741, 44.899573340497106 ], [ -0.060412253764631, 44.899175579195841 ], [ -0.060397378689113, 44.899167676625552 ], [ -0.06034159715593, 44.899251970652614 ], [ -0.060166815018619, 44.899175579195834 ], [ -0.060605629746338, 44.898401122145358 ], [ -0.060984944171993, 44.898411659045976 ], [ -0.060750661732618, 44.898814694045008 ], [ -0.061717541641151, 44.899212457842793 ], [ -0.061082561855064, 44.900076465088794 ], [ -0.061826315630867, 44.900566414648502 ], [ -0.061063038318452, 44.901290794788558 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 10, "Nom": "Piscine", "Surface": "0.25", "datearrachage": "2010-11-22", "Type de sol": null }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -0.061670127337949, 44.892795217257429 ], [ -0.06132800060108, 44.892779410362017 ], [ -0.061461876280725, 44.892004867164772 ], [ -0.0618560657819, 44.892073364602695 ], [ -0.061670127337949, 44.892795217257429 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 11, "Nom": "Hangar", "Surface": "0.17", "datearrachage": "2010-11-22", "Type de sol": null }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -0.06190069100845, 44.893825290575151 ], [ -0.061975066386029, 44.89351969530091 ], [ -0.062432474958147, 44.893603997607705 ], [ -0.062514287873487, 44.893677762024815 ], [ -0.062454787571422, 44.893806849527046 ], [ -0.062715101392953, 44.893867441520023 ], [ -0.062663038628647, 44.893962281033012 ], [ -0.06190069100845, 44.893825290575151 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 12, "Nom": "Flaujague", "Surface": "0.8", "datearrachage": "2020-11-22", "Type de sol": null }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -0.043524394592773, 44.9039603860695 ], [ -0.044558212341141, 44.904223782535617 ], [ -0.045108590135236, 44.903423053536535 ], [ -0.04418633545324, 44.903196529493194 ], [ -0.043524394592773, 44.9039603860695 ] ] ] } }
+]
+}
+
+
+// Ajoutez votre GeoJSON2 à la carte
+    var geojsonLayer2 = L.geoJSON(myGeoJSON2, {
+	 style: {
+    fillColor: 'gray',
+    fillOpacity: 0.6,
+    color: 'black',
+    weight: 0.5,
+  },
+      onEachFeature: function (feature, layer) {
+        layer.bindPopup("<strong><center> " + feature.properties.Nom + "</center></strong><br>Surface à planter: " + feature.properties.Surface + "<br>Date d'arrachage: " + feature.properties.datearrachage);
+      }
+    }).addTo(map);
+	
+
+	 // Créez la 4ème couche GeoJSON
+  var geojsonLayer4;
+
+var myGeoJSON4 = {
+"type": "FeatureCollection",
+"name": "amendements",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "ToubanVigne": "40Tonnes", "Toubanoptimum": null, "Compostdemarc": null, "Fumier": null }, "geometry": { "type": "Point", "coordinates": [ -0.017546402920219, 44.907956464593312 ] } },
+{ "type": "Feature", "properties": { "ToubanVigne": "13 Tonnes", "Toubanoptimum": null, "Compostdemarc": "13 Tonnes", "Fumier": null }, "geometry": { "type": "Point", "coordinates": [ -0.044048835337371, 44.904086418238656 ] } },
+{ "type": "Feature", "properties": { "ToubanVigne": "40 Tonnes", "Toubanoptimum": null, "Compostdemarc": "40 Tonnes", "Fumier": null }, "geometry": { "type": "Point", "coordinates": [ -0.053790876296333, 44.898957461397131 ] } },
+{ "type": "Feature", "properties": { "ToubanVigne": "25 Tonnes", "Toubanoptimum": null, "Compostdemarc": "25 Tonnes", "Fumier": null }, "geometry": { "type": "Point", "coordinates": [ -0.060779545171713, 44.898473214882699 ] } },
+{ "type": "Feature", "properties": { "ToubanVigne": "5 Tonnes", "Toubanoptimum": null, "Compostdemarc": "5 Tonnes", "Fumier": null }, "geometry": { "type": "Point", "coordinates": [ -0.061588208137915, 44.892774604586918 ] } }
+]
+}
+
+
+// Créez le calque GeoJSON4, mais sans ajouter de données initiales
+var geojsonLayer4 = L.geoJSON(null, {
+    pointToLayer: function (feature, latlng) {
+        // Vous pouvez personnaliser l'apparence des points ici
+        return L.marker(latlng, {
+            // Options pour les marqueurs, si nécessaire
+        });
+    },
+    onEachFeature: function (feature, layer) {
+        // Ajout du popup au marqueur
+        layer.bindPopup(createPopupContent(feature));
+    }
+});
+
+// Ajoutez le calque GeoJSON4 à la carte
+geojsonLayer4.addTo(map);
+
+// Fonction pour créer le contenu du popup en fonction des propriétés de la feature
+function createPopupContent(feature) {
+    var popupContent = "<strong><center>A livrer:</center></strong><br>";
+    // Ajoutez les propriétés au popup seulement si elles ne sont pas null ou false
+    popupContent += (feature.properties.ToubanVigne !== null && feature.properties.ToubanVigne !== false) ?  "<center><strong>-Touban Vigne: </strong>" + feature.properties.ToubanVigne + "<br>" : "";
+    popupContent += (feature.properties.Toubanoptimum !== null && feature.properties.Toubanoptimum !== false) ?  "<center><strong>- Touban Optimum: </strong>" + feature.properties.Toubanoptimum + "<br>" : "";
+    popupContent += (feature.properties.Compostdemarc !== null && feature.properties.Compostdemarc !== false) ? "<center><strong>- Compost de marc: </strong>" + feature.properties.Compostdemarc + "<br>" : "";
+    popupContent += (feature.properties.Fumier !== null && feature.properties.Fumier !== false) ? "<center><strong>- Fumier</strong>" + feature.properties.Fumier + "<br>" : "";
+
+    return popupContent;
+}
+
+// Ajoutez des cases à cocher pour filtrer les marqueurs
+var filterControls = document.getElementById('filterControls');
+
+// Fonction de filtrage basée sur les cases à cocher
 function filterMarkers() {
     // Effacer les marqueurs actuels du calque
     geojsonLayer4.clearLayers();
@@ -19,3 +339,138 @@ function filterMarkers() {
     // Ajouter les nouvelles données filtrées au calque
     geojsonLayer4.addData({ type: 'FeatureCollection', features: filteredFeatures });
 }
+
+
+
+// Créez une case à cocher pour chaque propriété
+['Touban Vigne', 'Touban Optimum', 'Compost de Marc', 'Fumier'].forEach(function (property) {
+    var checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = property;
+    checkbox.checked = false;  // Par défaut, toutes les cases sont cochées
+    checkbox.addEventListener('change', function () {
+        filterMarkers();
+    });
+
+    var label = document.createElement('label');
+    label.htmlFor = property;
+    label.appendChild(document.createTextNode(property));
+
+    filterControls.appendChild(checkbox);
+    filterControls.appendChild(label);
+    filterControls.appendChild(document.createElement('br'));
+});
+
+
+var geojsonLayer5;
+// Ajoutez votre GeoJSON5 à la carte
+		var geojsonLayer5 = L.geoJSON(myGeoJSON1, {
+		style: function (feature) {
+			var manquantpourcent = feature.properties.manquantpourcent;
+			var color; 
+
+
+// Nuance de couleur en fonction des manquants
+
+if (manquantpourcent >= 20) {
+  color = 'rgb(240, 0, 32)'; // Rouge
+} else if (manquantpourcent <= 20) {
+  color = 'rgb(0, 179, 0)'; // Vert foncé
+} 
+return {
+  fillColor: color,
+  fillOpacity: 1,
+  color: color,
+  weight: 1
+};
+
+  },
+  onEachFeature: function (feature, layer) {
+    var manquantpourcent = feature.properties.manquantpourcent;
+    var popupContent = "<strong><center> " + feature.properties.nom + "</center></strong><br>Manquant: " + manquantpourcent + "%";
+    layer.bindPopup(popupContent);
+}
+    });
+
+// Ajouter le contrôle de localisation
+L.control.locate({
+    position: 'topleft',
+    drawCircle: true,
+    follow: true,
+    setView: 'watch',
+    icon: 'fas fa-location-arrow'
+}).addTo(map);
+
+// Ajoutez des boutons pour activer/désactiver les couches
+var layer1Checkbox = document.getElementById('layer1Checkbox');
+var layer2Checkbox = document.getElementById('layer2Checkbox');
+var layer3Checkbox = document.getElementById('layer3Checkbox');
+var layer4Checkbox = document.getElementById('layer4Checkbox');
+var layer5Checkbox = document.getElementById('layer5Checkbox');
+
+// Définir l'état initial des couches
+layer1Checkbox.checked = true;  // La couche 1 est cochée par défaut
+layer2Checkbox.checked = true;   // La couche 2 est cochée par défaut
+layer3Checkbox.checked = false;  // La couche 3 est décochée par défaut
+layer4Checkbox.checked = false;  // La couche 4 est décochée par défaut
+layer5Checkbox.checked = false;  // La couche 5 est décochée par défaut
+
+// Ajouter les couches à la carte avec l'état initial
+geojsonLayer1.addTo(map);
+geojsonLayer2.addTo(map);
+
+
+
+
+layer1Checkbox.addEventListener('change', function () {
+    if (layer1Checkbox.checked) {
+        geojsonLayer1.addTo(map);
+        geojsonLayer3.removeFrom(map);
+        layer3Checkbox.checked = false;		// Décocher la couche 3
+		layer5Checkbox.checked = false;
+    } else {
+        geojsonLayer1.removeFrom(map);
+    }
+});
+
+layer2Checkbox.addEventListener('change', function () {
+    geojsonLayer2[layer2Checkbox.checked ? 'addTo' : 'removeFrom'](map);
+});
+layer5Checkbox.addEventListener('change', function () {
+    geojsonLayer5[layer5Checkbox.checked ? 'addTo' : 'removeFrom'](map);
+});
+
+layer3Checkbox.addEventListener('change', function () {
+    if (layer3Checkbox.checked) {
+        geojsonLayer3.addTo(map);
+        geojsonLayer1.removeFrom(map);
+        layer1Checkbox.checked = false;  // Décocher la couche 1
+    } else {
+        geojsonLayer3.removeFrom(map);
+    }
+});
+// Gérer les changements d'état des couches
+
+
+
+layer4Checkbox.addEventListener('change', function () {
+    geojsonLayer4[layer4Checkbox.checked ? 'addTo' : 'removeFrom'](map);
+    toggleFilterControls();
+});
+
+
+// Fonction pour afficher ou masquer le conteneur des filtres
+function toggleFilterControls() {
+    filterControlsContainer.style.display = layer4Checkbox.checked ? 'block' : 'none';
+}
+
+
+// Initialiser l'état du conteneur des filtres lors du chargement de la page
+toggleFilterControls();
+
+
+
+  </script>
+
+</body>
+</html>
